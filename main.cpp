@@ -8,7 +8,7 @@
 #include<stdio.h>    
 #include<math.h>    
 #include<string.h>    
-#include<..\chip8.h>
+#include<chip8.h>
 // Init_OpenGL() function    
 void Init_OpenGL()
 {
