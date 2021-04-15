@@ -1,117 +1,74 @@
 #include<Windows.h>    
 // first include Windows.h header file which is required    
-#include<stdio.h>    
-#include<gl/GL.h>   // GL.h header file    
-#include<gl/GLU.h> // GLU.h header file    
-#include<gl/glut.h>  // glut.h header file from freeglut\include\GL folder    
 #include<conio.h>    
 #include<stdio.h>    
 #include<math.h>    
 #include<string.h>    
 #include<chip8.h>
-// Init_OpenGL() function    
-void Init_OpenGL()
+#include <iostream>
+
+#include <SDL.h>
+
+
+#include <SDL_opengl.h> // otherwise we want to use OpenGL
+
+
+int main(int argc, char* argv[])
 {
-   // set background color to Black    
-   glClearColor(0.0, 0.0, 0.0, 0.0);
-   // set shade model to Flat    
-   glShadeModel(GL_FLAT);
-}
+	// Initialize SDL with video
+	SDL_Init(SDL_INIT_VIDEO);
 
-// Display_Objects() function    
-void Display_Objects(void)
-{
-   // clearing the window or remove all drawn objects    
-   glClear(GL_COLOR_BUFFER_BIT);
-   /*glPushMatrix(), which copies the current matrix and adds
-   the copy to the top of the stack, and
-   glPopMatrix(), which discards the top matrix on the stack*/
-   glPushMatrix();
-   //the glTranslatef() routine in the display list alters the position of the next object to be drawn    
-   glTranslatef(0.0, 0.0, 0.0);
-   // set color to object glColor3f(red,green,blue);    
-   glColor3f(1.0, 0.8, 0.0);
-   // draw a wire tea pot    
-   glutWireTeapot(1.0);
+	// Create an SDL window
+	SDL_Window* window = SDL_CreateWindow("Test", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480, SDL_WINDOW_OPENGL);
 
-   // draw a wire sphere    
-   glTranslatef(-2.5, 0.0, 0.0);
-   glColor3f(0.0, 1.0, 0.0);
-   glutWireSphere(0.8, 30, 30);
+	// if failed to create a window
+	if (!window)
+	{
+		// we'll print an error message and exit
+		std::cerr << "Error failed to create window!\n";
+		return 1;
+	}
 
-   // draw a wire cone    
-   glTranslatef(5.0, 0.0, 0.0);
-   glColor3f(0.0, 0.6, 1.0);
-   glutWireCone(0.8, 1.5, 20, 20);
+	// Create an OpenGL context (so we can use OpenGL functions)
+	SDL_GLContext context = SDL_GL_CreateContext(window);
 
-   // draw a wire cube    
-   glTranslatef(-1.0, 1.4, 0.0);
-   glColor3f(1.0, 0.3, 0.0);
-   glutWireCube(1.0);
+	// if we failed to create a context
+	if (!context)
+	{
+		// we'll print out an error message and exit
+		std::cerr << "Error failed to create a context\n!";
+		return 2;
+	}
 
-   // draw a wire torus    
-   glTranslatef(-3.0, 0.4, 0.0);
-   glColor3f(1.0, 0.3, 1.0);
-   glutWireTorus(0.2, 0.6, 20, 20);
+	SDL_Event event;	 // used to store any events from the OS
+	bool running = true; // used to determine if we're running the game
 
-   // draw a text    
-   glTranslatef(-2.5, -4.0, 0.0);
+	glClearColor(1, 0, 0, 1);
+	while (running)
+	{
+		// poll for events from SDL
+		while (SDL_PollEvent(&event))
+		{
+			// determine if the user still wants to have the window open
+			// (this basically checks if the user has pressed 'X')
+			running = event.type != SDL_QUIT;
+		}
 
-   char str[] = { "OpenGL Demo in Visual C++" };
+		glClear(GL_COLOR_BUFFER_BIT);
 
-   glColor3f(1.0, 1.0, 1.0);
-   // set position to text    
-   glRasterPos2f(2.0, 0.0);
+		// Swap OpenGL buffers
+		SDL_GL_SwapWindow(window);
+	}
 
-   for (int i = 0; i < strlen(str); i++)
-   {
-      // draw each character    
-      glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, str[i]);
-   }
 
-   //you can draw many objects here like polygons,lines,triangles etc    
+	// Destroy the context
+	SDL_GL_DeleteContext(context);
 
-   glPopMatrix();
-   glutSwapBuffers();
-}
-// Reshape() function    
-void Reshape(int w, int h)
-{
-   //adjusts the pixel rectangle for drawing to be the entire new window    
-   glViewport(0, 0, (GLsizei)w, (GLsizei)h);
-   //matrix specifies the projection transformation    
-   glMatrixMode(GL_PROJECTION);
-   // load the identity of matrix by clearing it.    
-   glLoadIdentity();
-   gluPerspective(60.0, (GLfloat)w / (GLfloat)h, 1.0, 20.0);
-   //matrix specifies the modelview transformation    
-   glMatrixMode(GL_MODELVIEW);
-   // again  load the identity of matrix    
-   glLoadIdentity();
-   // gluLookAt() this function is used to specify the eye.    
-   // it is used to specify the coordinates to view objects from a specific position    
-   gluLookAt(-0.3, 0.5, 5.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-}
+	// Destroy the window
+	SDL_DestroyWindow(window);
 
-// main function    
-int main(int argc, char** argv)
-{
-   // initialize glut    
-   glutInit(&argc, argv);
-   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
-   // set window size    
-   glutInitWindowSize(700, 500);
-   // set window location    
-   glutInitWindowPosition(250, 50);
-   // create window with window text    
-   glutCreateWindow("OpenGL Demo");
-   // call Init_OpenGL() function    
-   Init_OpenGL();
-   // call glutDisplayFunc() function & pass parameter as Display_Objects() function    
-   glutDisplayFunc(Display_Objects);
-   // call glutReshapeFunc() function & pass parameter as Reshape() function    
-   glutReshapeFunc(Reshape);
-   //glutMainLoop() is used to redisplay the objects    
-   glutMainLoop();
-   return 0;
+	// And quit SDL
+	SDL_Quit();
+
+	return 0;
 }

@@ -18,18 +18,6 @@
     <ClInclude Include="chip8.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\GL\freeglut.h">
-      <Filter>Resource Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\GL\freeglut_ext.h">
-      <Filter>Resource Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\GL\freeglut_std.h">
-      <Filter>Resource Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\GL\glut.h">
-      <Filter>Resource Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -37,7 +25,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Library Include="lib\x64\freeglut.lib">
+    <Library Include="SDL2-2.0.14\lib\x64\SDL2main.lib">
+      <Filter>Resource Files</Filter>
+    </Library>
+    <Library Include="SDL2-2.0.14\lib\x64\SDL2.lib">
       <Filter>Resource Files</Filter>
     </Library>
   </ItemGroup>
