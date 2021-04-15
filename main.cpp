@@ -1,16 +1,11 @@
-#include<Windows.h>    
-// first include Windows.h header file which is required    
-#include<conio.h>    
+ #include<conio.h>    
 #include<stdio.h>    
 #include<math.h>    
 #include<string.h>    
 #include<chip8.h>
 #include <iostream>
-
 #include <SDL.h>
-
-
-#include <SDL_opengl.h> // otherwise we want to use OpenGL
+#include <SDL_opengl.h>
 
 
 int main(int argc, char* argv[])
