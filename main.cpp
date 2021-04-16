@@ -3,42 +3,89 @@
 #include<math.h>    
 #include<string.h>    
 #include<chip8.h>
-#include <iostream>
-#include <SDL.h>
-#include <SDL_opengl.h>
+#include<iostream>
+#include<SDL.h>
+#include<SDL_opengl.h>
 
 
-int main(int argc, char* argv[])
-{
+
+int windowWidth;
+int windowHeight;
+SDL_Window* window;
+SDL_GLContext context;
+chip8 myChip8;
+
+
+
+
+bool setupGraphics() {
 	// Initialize SDL with video
 	SDL_Init(SDL_INIT_VIDEO);
 
-	// Create an SDL window
-	SDL_Window* window = SDL_CreateWindow("Test", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480, SDL_WINDOW_OPENGL);
+	windowWidth = 640;
+	windowHeight = 480;
 
+	// Create an SDL window
+	window = SDL_CreateWindow("Karl's Chip8 Emulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_OPENGL);
 	// if failed to create a window
 	if (!window)
 	{
 		// we'll print an error message and exit
 		std::cerr << "Error failed to create window!\n";
-		return 1;
+		return false;
 	}
 
 	// Create an OpenGL context (so we can use OpenGL functions)
-	SDL_GLContext context = SDL_GL_CreateContext(window);
+	context = SDL_GL_CreateContext(window);
 
 	// if we failed to create a context
 	if (!context)
 	{
 		// we'll print out an error message and exit
 		std::cerr << "Error failed to create a context\n!";
-		return 2;
+		return false;
 	}
+
+	glClearColor(1, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	SDL_GL_SwapWindow(window);
+
+	return true;
+}
+
+
+bool setupInput() {
+	// do any input setup here
+
+	return true;
+}
+
+void drawGraphics() {
+	// redraw screen
+
+			// Swap OpenGL buffers
+		//SDL_GL_SwapWindow(window);
+}
+
+int main(int argc, char* argv[])
+{
+
+	// Set up graphics
+	if (!setupGraphics()) return 1;
+
+	// Set up input
+	if (!setupInput()) return 1;
+
+	// Initilize the system
+	myChip8.initialize();
+
+
+
 
 	SDL_Event event;	 // used to store any events from the OS
 	bool running = true; // used to determine if we're running the game
 
-	glClearColor(1, 0, 0, 1);
+
 	while (running)
 	{
 		// poll for events from SDL
@@ -49,10 +96,15 @@ int main(int argc, char* argv[])
 			running = event.type != SDL_QUIT;
 		}
 
-		glClear(GL_COLOR_BUFFER_BIT);
+		// Emulate one cycle
+		myChip8.emulateCycle();
 
-		// Swap OpenGL buffers
-		SDL_GL_SwapWindow(window);
+		// If the draw flag is set, update the screen
+		if (myChip8.drawFlag)
+			drawGraphics();
+
+		// Store key press state (Press and Release)
+		myChip8.setKeys();
 	}
 
 
