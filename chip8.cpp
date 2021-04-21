@@ -1,9 +1,13 @@
 // Code samples copied from Laurence Muller's writeup at https://multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/
+// Opcode descriptions copied from wikipedia article on the Chip8 Interpreter
 
 #pragma once
 #include <chip8.h>
 #include <string>
 #include <math.h>
+#include <SDL.h>
+#include <iostream>
+#include <Windows.h>
 
 
 unsigned char chip8_fontset[80] =
@@ -41,6 +45,13 @@ void chip8::initialize() {
    // Clear display
    memset(gfx, 0, sizeof(gfx));
    drawFlag = false;
+
+   //// test pattern
+   //for (int i = 0; i < 32; i++) {
+   //   gfx[i * 64 + i] = 1;
+   //   
+   //}
+   //drawFlag = true;
 
    // Clear stack
    memset(stack, 0, sizeof(stack));
@@ -80,6 +91,57 @@ void chip8::loadGame() {
 
 void chip8::setKeys() {
 
+   //Keypad                   Keyboard
+//	+ -+-+-+-++-+-+-+-+
+//	| 1 | 2 | 3 | C|                |1 | 2 | 3 | 4 |
+//	+-+-+-+-++-+-+-+-+
+//	| 4 | 5 | 6 | D|                |Q | W | E | R |
+//	+-+-+-+-+= > +-+-+-+-+
+//	| 7 | 8 | 9 | E|                |A | S | D | F |
+//	+-+-+-+-++-+-+-+-+
+//	| A | 0 | B | F|                |Z | X | C | V |
+//	+-+-+-+-++-+-+-+-+
+
+
+   const Uint8* state = SDL_GetKeyboardState(NULL);
+   if (state[SDL_SCANCODE_X]) key[0x0] = 1;
+   else key[0x0] = 0;
+   if (state[SDL_SCANCODE_1]) key[0x1] = 1;
+   else key[0x1] = 0;
+   if (state[SDL_SCANCODE_2]) key[0x2] = 1;
+   else key[0x2] = 0;
+   if (state[SDL_SCANCODE_3]) key[0x3] = 1;
+   else key[0x3] = 0;
+   if (state[SDL_SCANCODE_Q]) key[0x4] = 1;
+   else key[0x4] = 0;
+   if (state[SDL_SCANCODE_W]) key[0x5] = 1;
+   else key[0x5] = 0;
+   if (state[SDL_SCANCODE_E]) key[0x6] = 1;
+   else key[0x6] = 0;
+   if (state[SDL_SCANCODE_A]) key[0x7] = 1;
+   else key[0x7] = 0;
+   if (state[SDL_SCANCODE_S]) key[0x8] = 1;
+   else key[0x8] = 0;
+   if (state[SDL_SCANCODE_D]) key[0x9] = 1;
+   else key[0x9] = 0;
+   if (state[SDL_SCANCODE_Z]) key[0xA] = 1;
+   else key[0xA] = 0;
+   if (state[SDL_SCANCODE_C]) key[0xB] = 1;
+   else key[0xB] = 0;
+   if (state[SDL_SCANCODE_4]) key[0xC] = 1;
+   else key[0xC] = 0;
+   if (state[SDL_SCANCODE_R]) key[0xD] = 1;
+   else key[0xD] = 0;
+   if (state[SDL_SCANCODE_F]) key[0xE] = 1;
+   else key[0xE] = 0;
+   if (state[SDL_SCANCODE_V]) key[0xF] = 1;
+   else key[0xF] = 0;
+
+}
+
+unsigned char* chip8::getGfx()
+{
+   return gfx;
 }
 
 void chip8::emulateCycle() {
@@ -91,14 +153,14 @@ void chip8::emulateCycle() {
       //   0NNN	Call		Calls machine code routine(RCA 1802 for COSMAC VIP) at address NNN.Not necessary for most ROMs.
 
    case 0x0000:
-      switch (opcode & 0x000F) {
-      case 0x0000:   //   00E0	Display	disp_clear()	Clears the screen.
+      switch (opcode & 0x00FF) {
+      case 0x00E0:   //   00E0	Display	disp_clear()	Clears the screen.
          memset(gfx, 0, sizeof(gfx));
          drawFlag = true;
          pc += 2;
          break;
          
-      case 0x000E:   //   00EE	Flow	return;	Returns from a subroutine.
+      case 0x00EE:   //   00EE	Flow	return;	Returns from a subroutine.
          --sp;
          pc = stack[sp];
          break;
@@ -107,7 +169,6 @@ void chip8::emulateCycle() {
          printf("Unknown opcode [0x0000]: 0x%X\n", opcode);
          break;
       }
-
 
    case 0x1000:      //   1NNN	Flow	goto NNN;	Jumps to address NNN.
       pc = (opcode & 0x0FFF);
@@ -217,7 +278,6 @@ void chip8::emulateCycle() {
          break;
       }
 
-
    case 0x9000:      //   9XY0	Cond	if (Vx != Vy)	Skips the next instruction if VX does not equal VY. (Usually the next instruction is a jump to skip a code block)
       if (V[(opcode & 0x0F00) >> 8] != V[(opcode & 0x00F0) >> 4])
          pc += 4;
@@ -236,9 +296,11 @@ void chip8::emulateCycle() {
       break;
 
    case 0xC000:      //   CXNN	Rand	Vx = rand() & NN	Sets VX to the result of a bitwise and operation on a random number(Typically: 0 to 255) and NN.
+   {
       unsigned int random = rand() % 256;
       V[(opcode & 0x0F00) >> 8] = random & (opcode & 0x00FF);
       pc += 2;
+   }
       break;      
 
    case 0xD000: {   //   DXYN	Disp	draw(Vx, Vy, N)	Draws a sprite at coordinate(VX, VY) that has a width of 8 pixels and a height of N + 1 pixels.Each row of 8 pixels is read as bit - coded starting from memory location I; I value does not change after the execution of this instruction.As described above, VF is set to 1 if any screen pixels are flipped from set to unset when the sprite is drawn, and to 0 if that does not happen
@@ -264,7 +326,6 @@ void chip8::emulateCycle() {
       break;
    }
           
-
    case 0xE000:
       switch (opcode & 0x00FF) {
       case 0x009E:   //   EX9E	KeyOp	if (key() == Vx)	Skips the next instruction if the key stored in VX is pressed. (Usually the next instruction is a jump to skip a code block)
@@ -274,13 +335,18 @@ void chip8::emulateCycle() {
             pc += 2;
          break;
          
-         //   EXA1	KeyOp	if (key() != Vx)	Skips the next instruction if the key stored in VX is not pressed. (Usually the next instruction is a jump to skip a code block)
-
+      case 0x00A1:      //   EXA1	KeyOp	if (key() != Vx)	Skips the next instruction if the key stored in VX is not pressed. (Usually the next instruction is a jump to skip a code block)
+         if (key[V[(opcode & 0x0F00) >> 8]] == 0)
+            pc += 4;
+         else
+            pc += 2;
+         break;
 
       default:
          printf("Unknown opcode [0xE000]: 0x%X\n", opcode);
          break;
       }
+
    case 0xF000:
       switch (opcode & 0x00FF) {
 
@@ -290,11 +356,43 @@ void chip8::emulateCycle() {
          pc += 2;
          break;
 
-         //   FX0A	KeyOp	Vx = get_key()	A key press is awaited, and then stored in VX. (Blocking Operation.All instruction halted until next key event)
-         //   FX15	Timer	delay_timer(Vx)	Sets the delay timer to VX.
-         //   FX18	Sound	sound_timer(Vx)	Sets the sound timer to VX.
-         //   FX1E	MEM	I += Vx	Adds VX to I.VF is not affected.[c]
-         //   FX29	MEM	I = sprite_addr[Vx]	Sets I to the location of the sprite for the character in VX.Characters 0 - F(in hexadecimal) are represented by a 4x5 font.
+      case 0x000A:      //   FX0A	KeyOp	Vx = get_key()	A key press is awaited, and then stored in VX. (Blocking Operation.All instruction halted until next key event)
+      {   bool waiting = true;
+      while (waiting) {
+         // copy old state of keyboard
+         unsigned char old_key[16];
+         for (int i = 0; i < 16; i++) {
+            old_key[i] = key[i];
+         }
+
+         // get new state of keyboard
+         setKeys();
+
+         // compare new state with old and exit if a new key was pressed
+         for (int i = 0; i < 16; i++) {
+            if (old_key[i] < key[i]) {
+               waiting = false;
+            }
+         }
+      }
+      }
+         break;
+                        
+      case 0x0015:      //   FX15	Timer	delay_timer(Vx)	Sets the delay timer to VX.
+         delay_timer = (opcode & 0x0F00) >> 8;
+         break;
+
+      case 0x0018:      //   FX18	Sound	sound_timer(Vx)	Sets the sound timer to VX.
+         sound_timer = (opcode & 0x0F00) >> 8;
+         break;
+
+      case 0x001E:      //   FX1E	MEM	I += Vx	Adds VX to I.VF is not affected.[c]
+         I += (opcode & 0x0F00) >> 8;
+         break;
+
+      case 0x0029:      //   FX29	MEM	I = sprite_addr[Vx]	Sets I to the location of the sprite for the character in VX.Characters 0 - F(in hexadecimal) are represented by a 4x5 font.
+         I = ((opcode & 0x0F00) >> 8) * 0x5;
+         break;
          
       case 0x0033:      //   FX33	BCD	set_BCD(Vx);
          //               *(I + 0) = BCD(3);
@@ -306,17 +404,28 @@ void chip8::emulateCycle() {
          memory[I + 2] = (V[(opcode & 0x0F00) >> 8] % 100) % 10;
          pc += 2;
          break;
-         
-         
-         
-         
-         
-         
-         
-         //   FX55	MEM	reg_dump(Vx, &I)	Stores V0 to VX(including VX) in memory starting at address I.The offset from I is increased by 1 for each value written, but I itself is left unmodified.[d]
-         //   FX65	MEM	reg_load(Vx, &I)	Fills V0 to VX(including VX) with values from memory starting at address I.The offset from I is increased by 1 for each value written, but I itself is left unmodified.[d]
-      
-      
+
+      case 0x0055:      //   FX55	MEM	reg_dump(Vx, &I)	Stores V0 to VX(including VX) in memory starting at address I.The offset from I is increased by 1 for each value written, but I itself is left unmodified.[d]
+      {
+         int start_address = I;
+         int end_reg = (opcode & 0x0F00) >> 8;
+         for (int i = 0; i <= end_reg; i++) {
+            memory[start_address] = V[end_reg];
+            start_address++;
+         }
+      }
+         break;
+
+      case 0x0065:      //   FX65	MEM	reg_load(Vx, &I)	Fills V0 to VX(including VX) with values from memory starting at address I.The offset from I is increased by 1 for each value written, but I itself is left unmodified.[d]
+      {
+         int start_address = I;
+         int end_reg = (opcode & 0x0F00) >> 8;
+         for (int i = 0; i <= end_reg; i++) {
+            V[end_reg] = memory[start_address];
+            start_address++;
+         }
+      }
+         break;
       
       default:
          printf("Unknown opcode [0xF000]: 0x%X\n", opcode);
@@ -324,12 +433,9 @@ void chip8::emulateCycle() {
       
       }
 
-
    default:
       printf("Unknown opcode: 0x%X\n", opcode);
-
    }
-
 
    // Update timers
    if (delay_timer > 0)
@@ -337,11 +443,7 @@ void chip8::emulateCycle() {
 
    if (sound_timer > 0) {
       if (sound_timer == 1)
-         printf("BEEP!\n");
+         Beep(523, 200);
       --sound_timer;
    }
-
-
-
-
 }

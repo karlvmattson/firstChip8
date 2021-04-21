@@ -6,27 +6,31 @@
 #include<iostream>
 #include<SDL.h>
 #include<SDL_opengl.h>
+#include <string>
 
 
 
 int windowWidth;
 int windowHeight;
 SDL_Window* window;
+SDL_Renderer* renderer;
 SDL_GLContext context;
 chip8 myChip8;
 
-
+using namespace std;
 
 
 bool setupGraphics() {
 	// Initialize SDL with video
 	SDL_Init(SDL_INIT_VIDEO);
 
-	windowWidth = 640;
-	windowHeight = 480;
+	windowWidth = 1280;
+	windowHeight = 640;
 
 	// Create an SDL window
-	window = SDL_CreateWindow("Karl's Chip8 Emulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_OPENGL);
+	window = SDL_CreateWindow("Karl's Chip8 Emulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, windowWidth, windowHeight, SDL_WINDOW_SHOWN);
+	renderer = SDL_CreateRenderer(window, 0, SDL_RENDERER_ACCELERATED);
+
 	// if failed to create a window
 	if (!window)
 	{
@@ -35,20 +39,28 @@ bool setupGraphics() {
 		return false;
 	}
 
-	// Create an OpenGL context (so we can use OpenGL functions)
-	context = SDL_GL_CreateContext(window);
+	// Set render color to black ( background will be rendered in this color )
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
-	// if we failed to create a context
-	if (!context)
-	{
-		// we'll print out an error message and exit
-		std::cerr << "Error failed to create a context\n!";
-		return false;
-	}
+	// Clear winow
+	SDL_RenderClear(renderer);
 
-	glClearColor(1, 0, 0, 1);
-	glClear(GL_COLOR_BUFFER_BIT);
-	SDL_GL_SwapWindow(window);
+	// Render the rect to the screen
+	SDL_RenderPresent(renderer);
+
+
+	//// Create an OpenGL context (so we can use OpenGL functions)
+	//context = SDL_GL_CreateContext(window);
+
+	//// if we failed to create a context
+	//if (!context)
+	//{
+	//	// we'll print out an error message and exit
+	//	std::cerr << "Error failed to create a context\n!";
+	//	return false;
+	//}
+	//glClearColor(0, 0, 0, 0);
+
 
 	return true;
 }
@@ -73,11 +85,37 @@ bool setupInput() {
 	return true;
 }
 
-void drawGraphics() {
-	// redraw screen
+void drawGraphics(chip8 &thisChip) {
+	// Set render color to black ( background will be rendered in this color )
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
-			// Swap OpenGL buffers
-		//SDL_GL_SwapWindow(window);
+	// Clear winow
+	SDL_RenderClear(renderer);
+
+	// Set render color to white
+	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+
+	// Loop through gfx array and draw each white rectangle
+	// X = 64, Y = 32, draw to 1280 x 640 window
+	for (int i = 0; i < 32 * 64; i++) {
+		if (thisChip.gfx[i] != 0) {
+			// draw white rectangle
+			// rectangle should be 20 x 20 pixels
+			SDL_Rect r;
+			r.x = 20 * (i % 64);
+			r.y = 620 - (20 * (i / 64));
+			r.w = 20;
+			r.h = 20;
+			// Render rect
+			SDL_RenderFillRect(renderer, &r);
+		}
+	}
+
+	// Render the rect to the screen
+	SDL_RenderPresent(renderer);
+
+	// Set draw flag to false
+	thisChip.drawFlag = false;
 }
 
 int main(int argc, char* argv[])
@@ -92,12 +130,8 @@ int main(int argc, char* argv[])
 	// Initilize the system
 	myChip8.initialize();
 
-
-
-
 	SDL_Event event;	 // used to store any events from the OS
 	bool running = true; // used to determine if we're running the game
-
 
 	while (running)
 	{
@@ -114,10 +148,11 @@ int main(int argc, char* argv[])
 
 		// If the draw flag is set, update the screen
 		if (myChip8.drawFlag)
-			drawGraphics();
+			drawGraphics(myChip8);
 
 		// Store key press state (Press and Release)
 		myChip8.setKeys();
+
 	}
 
 

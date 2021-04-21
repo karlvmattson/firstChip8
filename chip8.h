@@ -12,12 +12,14 @@ class chip8 {
       void loadGame();
       void emulateCycle();
       void setKeys();
+      unsigned char* getGfx();
+      unsigned char gfx[32 * 64];   // 1 for pixel on, 0 for off
       bool drawFlag;
 
 
 
    private:
-      unsigned char gfx[32 * 64];   // 1 for pixel on, 0 for off
+
 
       unsigned short opcode;        // current opcode
       unsigned char memory[4096];   // system memory
