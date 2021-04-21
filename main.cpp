@@ -130,6 +130,9 @@ int main(int argc, char* argv[])
 	// Initilize the system
 	myChip8.initialize();
 
+	// Load a program!!!
+	myChip8.loadApplication("PONG");
+
 	SDL_Event event;	 // used to store any events from the OS
 	bool running = true; // used to determine if we're running the game
 

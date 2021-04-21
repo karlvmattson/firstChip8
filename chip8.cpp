@@ -8,6 +8,7 @@
 #include <SDL.h>
 #include <iostream>
 #include <Windows.h>
+using namespace std;
 
 
 unsigned char chip8_fontset[80] =
@@ -82,11 +83,60 @@ void chip8::initialize() {
 
 }
 
-void chip8::loadGame() {
+bool chip8::loadApplication(string filename)
+{
+   initialize();
+   printf("Loading: %s\n", filename);
 
-   // use fopen in binary mode to load in a program
-   //for (int i = 0; i < bufferSize; ++i)
-   //   memory[i + 512] = buffer[i];
+   // Open file
+   char* char_arr;
+   string str_obj("./roms/" + filename);
+   char_arr = &str_obj[0];
+
+#pragma warning(suppress : 4996)
+   FILE* pFile = fopen(char_arr, "rb");
+   if (pFile == NULL)
+   {
+      fputs("File error", stderr);
+      return false;
+   }
+
+   // Check file size
+   fseek(pFile, 0, SEEK_END);
+   long lSize = ftell(pFile);
+   rewind(pFile);
+   printf("Filesize: %d\n", (int)lSize);
+
+   // Allocate memory to contain the whole file
+   char* buffer = (char*)malloc(sizeof(char) * lSize);
+   if (buffer == NULL)
+   {
+      fputs("Memory error", stderr);
+      return false;
+   }
+
+   // Copy the file into the buffer
+   size_t result = fread(buffer, 1, lSize, pFile);
+   if (result != lSize)
+   {
+      fputs("Reading error", stderr);
+      return false;
+   }
+
+   // Copy buffer to Chip8 memory
+   if ((4096 - 512) > lSize)
+   {
+      for (int i = 0; i < lSize; ++i)
+         memory[i + 512] = buffer[i];
+   }
+   else
+      printf("Error: ROM too big for memory");
+
+   // Close file, free buffer
+   fclose(pFile);
+   free(buffer);
+
+   return true;
 }
 
 void chip8::setKeys() {
@@ -147,6 +197,7 @@ unsigned char* chip8::getGfx()
 void chip8::emulateCycle() {
    // Fetch Opcode
    opcode = memory[pc] << 8 | memory[pc + 1];
+   cout << opcode << "\n";
 
    // Decode Opcode
    switch (opcode & 0xF000) {
@@ -163,12 +214,13 @@ void chip8::emulateCycle() {
       case 0x00EE:   //   00EE	Flow	return;	Returns from a subroutine.
          --sp;
          pc = stack[sp];
+         pc += 2;
          break;
 
       default:
          printf("Unknown opcode [0x0000]: 0x%X\n", opcode);
-         break;
       }
+   break;
 
    case 0x1000:      //   1NNN	Flow	goto NNN;	Jumps to address NNN.
       pc = (opcode & 0x0FFF);
@@ -344,55 +396,57 @@ void chip8::emulateCycle() {
 
       default:
          printf("Unknown opcode [0xE000]: 0x%X\n", opcode);
-         break;
+      break;
       }
 
    case 0xF000:
       switch (opcode & 0x00FF) {
 
-
       case 0x0007:      //   FX07	Timer	Vx = get_delay()	Sets VX to the value of the delay timer.
          V[(opcode & 0x0F00) >> 8] = delay_timer;
          pc += 2;
-         break;
+      break;
 
-      case 0x000A:      //   FX0A	KeyOp	Vx = get_key()	A key press is awaited, and then stored in VX. (Blocking Operation.All instruction halted until next key event)
-      {   bool waiting = true;
-      while (waiting) {
-         // copy old state of keyboard
-         unsigned char old_key[16];
-         for (int i = 0; i < 16; i++) {
-            old_key[i] = key[i];
-         }
+      case 0x000A:  {    //   FX0A	KeyOp	Vx = get_key()	A key press is awaited, and then stored in VX. (Blocking Operation.All instruction halted until next key event)
+         bool waiting = true;
+         while (waiting) {
+            // copy old state of keyboard
+            unsigned char old_key[16];
+            for (int i = 0; i < 16; i++) {
+               old_key[i] = key[i];
+            }
 
-         // get new state of keyboard
-         setKeys();
+            // get new state of keyboard
+            setKeys();
 
-         // compare new state with old and exit if a new key was pressed
-         for (int i = 0; i < 16; i++) {
-            if (old_key[i] < key[i]) {
-               waiting = false;
+            // compare new state with old and exit if a new key was pressed
+            for (int i = 0; i < 16; i++) {
+               if (old_key[i] < key[i]) waiting = false;
             }
          }
+         pc += 2;
       }
-      }
-         break;
+      break;
                         
       case 0x0015:      //   FX15	Timer	delay_timer(Vx)	Sets the delay timer to VX.
          delay_timer = (opcode & 0x0F00) >> 8;
-         break;
+         pc += 2;
+      break;
 
       case 0x0018:      //   FX18	Sound	sound_timer(Vx)	Sets the sound timer to VX.
          sound_timer = (opcode & 0x0F00) >> 8;
-         break;
+         pc += 2;
+      break;
 
       case 0x001E:      //   FX1E	MEM	I += Vx	Adds VX to I.VF is not affected.[c]
          I += (opcode & 0x0F00) >> 8;
-         break;
+         pc += 2;
+      break;
 
       case 0x0029:      //   FX29	MEM	I = sprite_addr[Vx]	Sets I to the location of the sprite for the character in VX.Characters 0 - F(in hexadecimal) are represented by a 4x5 font.
          I = ((opcode & 0x0F00) >> 8) * 0x5;
-         break;
+         pc += 2;
+      break;
          
       case 0x0033:      //   FX33	BCD	set_BCD(Vx);
          //               *(I + 0) = BCD(3);
@@ -403,35 +457,36 @@ void chip8::emulateCycle() {
          memory[I + 1] = (V[(opcode & 0x0F00) >> 8] / 10) % 10;
          memory[I + 2] = (V[(opcode & 0x0F00) >> 8] % 100) % 10;
          pc += 2;
-         break;
+      break;
 
-      case 0x0055:      //   FX55	MEM	reg_dump(Vx, &I)	Stores V0 to VX(including VX) in memory starting at address I.The offset from I is increased by 1 for each value written, but I itself is left unmodified.[d]
-      {
+      case 0x0055:  {    //   FX55	MEM	reg_dump(Vx, &I)	Stores V0 to VX(including VX) in memory starting at address I.The offset from I is increased by 1 for each value written, but I itself is left unmodified.[d]
          int start_address = I;
          int end_reg = (opcode & 0x0F00) >> 8;
          for (int i = 0; i <= end_reg; i++) {
             memory[start_address] = V[end_reg];
             start_address++;
          }
+         pc += 2;
       }
-         break;
+      break;
 
-      case 0x0065:      //   FX65	MEM	reg_load(Vx, &I)	Fills V0 to VX(including VX) with values from memory starting at address I.The offset from I is increased by 1 for each value written, but I itself is left unmodified.[d]
-      {
+      case 0x0065: {     //   FX65	MEM	reg_load(Vx, &I)	Fills V0 to VX(including VX) with values from memory starting at address I.The offset from I is increased by 1 for each value written, but I itself is left unmodified.[d]
          int start_address = I;
          int end_reg = (opcode & 0x0F00) >> 8;
          for (int i = 0; i <= end_reg; i++) {
             V[end_reg] = memory[start_address];
             start_address++;
          }
+         pc += 2;
       }
-         break;
+      break;
       
       default:
          printf("Unknown opcode [0xF000]: 0x%X\n", opcode);
-         break;
+      break;
       
       }
+      break;
 
    default:
       printf("Unknown opcode: 0x%X\n", opcode);

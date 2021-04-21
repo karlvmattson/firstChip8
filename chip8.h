@@ -1,7 +1,5 @@
 #pragma once
-
-
-
+#include <string>
 
 class chip8 {
 
@@ -9,7 +7,7 @@ class chip8 {
       chip8();
       ~chip8();
       void initialize();
-      void loadGame();
+      bool loadApplication(std::string filename);
       void emulateCycle();
       void setKeys();
       unsigned char* getGfx();
